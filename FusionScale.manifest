@@ -6,7 +6,7 @@
     "description": {
         "": "Scales the viewport to 1:1 real-life dimensions using screen calibration."
     },
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runOnStartup": true,
     "supportedOS": "windows|mac",
     "editEnabled": true

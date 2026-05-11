@@ -8,8 +8,10 @@ Place a ruler against your screen and verify that your design matches its physic
 
 - **One-click 1:1 scale** — instantly zooms the viewport so objects appear at their true physical size on screen
 - **Screen calibration** — a guided first-run calibration measures your screen's actual pixel density using a physical ruler
+- **Recalibrate anytime** — dedicated button to redo calibration when you switch monitors or change resolution
 - **Persistent calibration** — calibrate once, the correction factor is saved between sessions
 - **Non-destructive** — uses temporary overlay graphics during calibration, never modifies your design
+- **Input validation** — rejects invalid calibration values before they can be saved
 
 ## Installation
 
@@ -28,7 +30,7 @@ Place a ruler against your screen and verify that your design matches its physic
 ### First run (calibration)
 
 1. Open any design in Fusion 360
-2. Click the **1:1 Scale** button in the UTILITIES toolbar (Add-Ins panel)
+2. Click the **1:1 Scale** button in the **INSPECT** panel of the toolbar
 3. A red **50 mm reference line** appears on screen with a calibration dialog
 4. Measure the reference line on your screen with a **physical ruler**
 5. Enter the measured length in millimeters and click **OK**
@@ -40,7 +42,7 @@ Click the **1:1 Scale** button — the viewport instantly scales to 1:1 using yo
 
 ### Recalibrate
 
-Delete the `config.json` file in the add-in folder and click the button again to redo calibration. Recalibration is needed if you change monitors or screen resolution.
+Click the **Recalibrate Scale** button (also in the INSPECT panel) to redo calibration at any time. Use this when you switch monitors or change screen resolution.
 
 ## System requirements
 
@@ -61,14 +63,14 @@ The add-in uses orthographic projection and the `Camera.setExtents()` API to set
 
 ```
 FusionScale/
-  FusionScale.py          # Entry point — registers toolbar button
+  FusionScale.py          # Entry point — registers toolbar buttons
   FusionScale.manifest    # Add-in manifest
   commands/
-    scale_command.py       # Calibration + scale command logic
+    scale_command.py       # Scale + recalibrate command logic
   lib/
     config.py              # Persistent calibration storage
     camera.py              # Viewport math (pixel density, setExtents)
-  resources/               # Toolbar icons (16x16, 32x32)
+  resources/               # Toolbar icons (16x16, 32x32, 64x64)
 ```
 
 ## License

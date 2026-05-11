@@ -8,13 +8,22 @@ from commands.scale_command import (
     COMMAND_NAME,
     COMMAND_TOOLTIP,
     CommandCreatedHandler,
+    RECALIBRATE_ID,
+    RECALIBRATE_NAME,
+    RECALIBRATE_TOOLTIP,
+    RecalibrateCreatedHandler,
 )
 
 _app = None
 _ui = None
 _handlers = []
 
-PANEL_ID = "SolidScriptsAddinsPanel"
+PANEL_ID = "InspectPanel"
+
+_COMMANDS = [
+    (COMMAND_ID, COMMAND_NAME, COMMAND_TOOLTIP, CommandCreatedHandler),
+    (RECALIBRATE_ID, RECALIBRATE_NAME, RECALIBRATE_TOOLTIP, RecalibrateCreatedHandler),
+]
 
 
 def run(context):
@@ -23,24 +32,27 @@ def run(context):
         _app = adsk.core.Application.get()
         _ui = _app.userInterface
 
-        cmd_def = _ui.commandDefinitions.itemById(COMMAND_ID)
-        if cmd_def:
-            cmd_def.deleteMe()
-
         resource_dir = os.path.join(os.path.dirname(__file__), "resources")
-        cmd_def = _ui.commandDefinitions.addButtonDefinition(
-            COMMAND_ID, COMMAND_NAME, COMMAND_TOOLTIP, resource_dir
-        )
-
-        on_created = CommandCreatedHandler()
-        cmd_def.commandCreated.add(on_created)
-        _handlers.append(on_created)
 
         panel = _ui.allToolbarPanels.itemById(PANEL_ID)
-        if panel:
-            existing = panel.controls.itemById(COMMAND_ID)
-            if not existing:
-                panel.controls.addCommand(cmd_def)
+
+        for cmd_id, cmd_name, cmd_tooltip, handler_class in _COMMANDS:
+            cmd_def = _ui.commandDefinitions.itemById(cmd_id)
+            if cmd_def:
+                cmd_def.deleteMe()
+
+            cmd_def = _ui.commandDefinitions.addButtonDefinition(
+                cmd_id, cmd_name, cmd_tooltip, resource_dir
+            )
+
+            handler = handler_class()
+            cmd_def.commandCreated.add(handler)
+            _handlers.append(handler)
+
+            if panel:
+                existing = panel.controls.itemById(cmd_id)
+                if not existing:
+                    panel.controls.addCommand(cmd_def)
 
     except:
         if _ui:
@@ -51,15 +63,15 @@ def stop(context):
     global _ui
     try:
         if _ui:
-            cmd_def = _ui.commandDefinitions.itemById(COMMAND_ID)
-            if cmd_def:
-                cmd_def.deleteMe()
-
             panel = _ui.allToolbarPanels.itemById(PANEL_ID)
-            if panel:
-                ctrl = panel.controls.itemById(COMMAND_ID)
-                if ctrl:
-                    ctrl.deleteMe()
+            for cmd_id, _, _, _ in _COMMANDS:
+                cmd_def = _ui.commandDefinitions.itemById(cmd_id)
+                if cmd_def:
+                    cmd_def.deleteMe()
+                if panel:
+                    ctrl = panel.controls.itemById(cmd_id)
+                    if ctrl:
+                        ctrl.deleteMe()
     except:
         if _ui:
             _ui.messageBox(traceback.format_exc())

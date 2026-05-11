@@ -15,9 +15,19 @@ _saved_camera = None
 
 COMMAND_ID = "FusionScale_ScaleView"
 COMMAND_NAME = "1:1 Scale"
-COMMAND_TOOLTIP = "Scale viewport to real-life 1:1 dimensions.\nFirst use requires calibration."
+COMMAND_TOOLTIP = (
+    "Scale viewport to real-life 1:1 dimensions.\n"
+    "First use requires calibration."
+)
+
+RECALIBRATE_ID = "FusionScale_Recalibrate"
+RECALIBRATE_NAME = "Recalibrate Scale"
+RECALIBRATE_TOOLTIP = "Redo the screen calibration for 1:1 scale."
 
 
+# ---------------------------------------------------------------------------
+# Scale command — calibrate on first use, instant 1:1 after
+# ---------------------------------------------------------------------------
 class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args: adsk.core.CommandCreatedEventArgs):
         try:
@@ -33,45 +43,104 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             design = adsk.fusion.Design.cast(app.activeProduct)
             if not design:
-                app.userInterface.messageBox("Please open or create a design first.")
+                app.userInterface.messageBox(
+                    "Please open or create a design first."
+                )
                 return
 
             _show_calibration_view(app, design, cfg)
-            self._setup_calibration_inputs(cmd, cfg)
+            _setup_calibration_inputs(cmd, cfg)
 
         except:
             app = adsk.core.Application.get()
             app.userInterface.messageBox(traceback.format_exc())
 
-    def _setup_calibration_inputs(self, cmd, cfg):
-        inputs = cmd.commandInputs
-        ref_len_mm = cfg["reference_length_mm"]
-        ref_len_cm = ref_len_mm / 10.0
 
-        inputs.addTextBoxCommandInput(
-            "instructions",
-            "",
-            f"A {ref_len_mm:.0f} mm reference line is displayed.\n"
-            "Measure it on your screen with a physical ruler,\n"
-            "then enter the measured length below.",
-            4,
-            True,
-        )
-        inputs.addStringValueInput(
-            "measured_length",
-            "Measured length (mm)",
-            str(ref_len_mm),
-        )
+# ---------------------------------------------------------------------------
+# Recalibrate command — always shows calibration dialog
+# ---------------------------------------------------------------------------
+class RecalibrateCreatedHandler(adsk.core.CommandCreatedEventHandler):
+    def notify(self, args: adsk.core.CommandCreatedEventArgs):
+        try:
+            app = adsk.core.Application.get()
+            cmd = args.command
+            cfg = config.load()
 
-        on_execute = CalibrateExecuteHandler()
-        cmd.execute.add(on_execute)
-        _handlers.append(on_execute)
+            design = adsk.fusion.Design.cast(app.activeProduct)
+            if not design:
+                app.userInterface.messageBox(
+                    "Please open or create a design first."
+                )
+                return
 
-        on_destroy = CommandDestroyHandler()
-        cmd.destroy.add(on_destroy)
-        _handlers.append(on_destroy)
+            _show_calibration_view(app, design, cfg)
+            _setup_calibration_inputs(cmd, cfg)
+
+        except:
+            app = adsk.core.Application.get()
+            app.userInterface.messageBox(traceback.format_exc())
 
 
+# ---------------------------------------------------------------------------
+# Shared calibration dialog setup
+# ---------------------------------------------------------------------------
+def _setup_calibration_inputs(cmd, cfg):
+    inputs = cmd.commandInputs
+    ref_len_mm = cfg["reference_length_mm"]
+
+    inputs.addTextBoxCommandInput(
+        "instructions",
+        "",
+        f"A {ref_len_mm:.0f} mm reference line is displayed.\n"
+        "Measure it on your screen with a physical ruler,\n"
+        "then enter the measured length below.",
+        4,
+        True,
+    )
+    inputs.addStringValueInput(
+        "measured_length",
+        "Measured length (mm)",
+        str(ref_len_mm),
+    )
+
+    on_validate = ValidateInputHandler()
+    cmd.validateInputs.add(on_validate)
+    _handlers.append(on_validate)
+
+    on_execute = CalibrateExecuteHandler()
+    cmd.execute.add(on_execute)
+    _handlers.append(on_execute)
+
+    on_destroy = CommandDestroyHandler()
+    cmd.destroy.add(on_destroy)
+    _handlers.append(on_destroy)
+
+
+# ---------------------------------------------------------------------------
+# Input validation — reject non-numeric, zero, negative
+# ---------------------------------------------------------------------------
+class ValidateInputHandler(adsk.core.ValidateInputsEventHandler):
+    def notify(self, args: adsk.core.ValidateInputsEventArgs):
+        try:
+            inputs = args.inputs
+            measured_input = inputs.itemById("measured_length")
+            if not measured_input:
+                args.areInputsValid = False
+                return
+
+            text = adsk.core.StringValueCommandInput.cast(measured_input).value
+            try:
+                val = float(text)
+                args.areInputsValid = val > 0
+            except ValueError:
+                args.areInputsValid = False
+        except:
+            args.areInputsValid = False
+
+
+# ---------------------------------------------------------------------------
+# Execute — compute px_per_cm and apply scale
+# ---------------------------------------------------------------------------
 class CalibrateExecuteHandler(adsk.core.CommandEventHandler):
     def notify(self, args: adsk.core.CommandEventArgs):
         try:
@@ -99,6 +168,9 @@ class CalibrateExecuteHandler(adsk.core.CommandEventHandler):
             app.userInterface.messageBox(traceback.format_exc())
 
 
+# ---------------------------------------------------------------------------
+# Destroy — clean up calibration graphics if dialog is cancelled
+# ---------------------------------------------------------------------------
 class CommandDestroyHandler(adsk.core.CommandEventHandler):
     def notify(self, args: adsk.core.CommandEventArgs):
         try:
@@ -108,6 +180,9 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
             pass
 
 
+# ---------------------------------------------------------------------------
+# Calibration view helpers
+# ---------------------------------------------------------------------------
 def _show_calibration_view(app, design, cfg):
     global _cg_group, _hidden_occurrences, _hidden_bodies, _saved_camera
 
@@ -116,6 +191,7 @@ def _show_calibration_view(app, design, cfg):
 
     _saved_camera = viewport.camera
 
+    # Hide all visible geometry
     _hidden_occurrences = []
     for i in range(root.allOccurrences.count):
         occ = root.allOccurrences.item(i)
@@ -130,21 +206,25 @@ def _show_calibration_view(app, design, cfg):
             body.isLightBulbOn = False
             _hidden_bodies.append(body)
 
+    # Draw reference line with custom graphics
     ref_len_cm = cfg["reference_length_mm"] / 10.0
     half = ref_len_cm / 2.0
 
     _cg_group = root.customGraphicsGroups.add()
 
+    red = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+        adsk.core.Color.create(220, 40, 40, 255)
+    )
+
+    # Main horizontal line
     coords = adsk.fusion.CustomGraphicsCoordinates.create(
         [-half, 0, 0, half, 0, 0]
     )
     line = _cg_group.addLines(coords, [], False, [])
-    red = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-        adsk.core.Color.create(220, 40, 40, 255)
-    )
     line.color = red
     line.weight = 5.0
 
+    # End tick marks
     tick = 0.4
     tick_coords = adsk.fusion.CustomGraphicsCoordinates.create(
         [-half, -tick, 0, -half, tick, 0, half, -tick, 0, half, tick, 0]
@@ -153,6 +233,7 @@ def _show_calibration_view(app, design, cfg):
     ticks.color = red
     ticks.weight = 4.0
 
+    # Label
     transform = adsk.core.Matrix3D.create()
     transform.translation = adsk.core.Vector3D.create(-1.2, -1.2, 0)
     text = _cg_group.addText(
@@ -160,13 +241,17 @@ def _show_calibration_view(app, design, cfg):
     )
     text.color = red
 
+    # Set camera: top-down orthographic centered on origin
     cam = viewport.camera
     cam.cameraType = adsk.core.CameraTypes.OrthographicCameraType
     cam.isSmoothTransition = False
     cam.eye = adsk.core.Point3D.create(0, 0, 100)
     cam.target = adsk.core.Point3D.create(0, 0, 0)
     cam.upVector = adsk.core.Vector3D.create(0, 1, 0)
-    cam.setExtents(15.0, 10.0)
+    cam.setExtents(
+        camera.CALIBRATION_EXTENTS_WIDTH,
+        camera.CALIBRATION_EXTENTS_WIDTH * viewport.height / viewport.width,
+    )
     viewport.camera = cam
     viewport.refresh()
 
