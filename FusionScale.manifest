@@ -1,12 +1,12 @@
 {
     "autodeskProduct": "Fusion",
     "type": "addin",
-    "id": "fusionscale-1to1-view",
-    "author": "alexa",
+    "id": "db9567fa-8893-46f4-b0ac-85064a3ab912",
+    "author": "Alexandre Courrieu",
     "description": {
         "": "Scales the viewport to 1:1 real-life dimensions using screen calibration."
     },
-    "version": "0.2.0",
+    "version": "1.0.0",
     "runOnStartup": true,
     "supportedOS": "windows|mac",
     "editEnabled": true

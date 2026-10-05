@@ -1,7 +1,9 @@
 import json
 import os
 
-_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
+# Outside the add-in folder so calibration survives App Store updates/reinstalls.
+_BASE = os.environ.get("APPDATA") or os.path.expanduser("~/Library/Application Support")
+_CONFIG_PATH = os.path.join(_BASE, "Autodesk", "FusionScale", "config.json")
 
 _DEFAULTS = {
     "px_per_cm": None,
@@ -17,6 +19,7 @@ def load() -> dict:
 
 
 def save(cfg: dict):
+    os.makedirs(os.path.dirname(_CONFIG_PATH), exist_ok=True)
     with open(_CONFIG_PATH, "w") as f:
         json.dump(cfg, f, indent=2)
 

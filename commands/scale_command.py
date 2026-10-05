@@ -1,11 +1,8 @@
 import adsk.core
 import adsk.fusion
 import traceback
-import os
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from lib import config, camera
+from ..lib import config, camera
 
 _handlers = []
 _cg_group = None
