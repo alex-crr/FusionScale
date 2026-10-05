@@ -19,7 +19,7 @@ with open(os.path.join(ROOT, MODULE + ".manifest"), encoding="utf-8") as _f:
 
 APP_NAME = "1:1 Scale"
 AUTHOR = "Alexandre Courrieu"
-EMAIL = "alexandre@courrieu.com"
+EMAIL = "alexandre@courri.eu"
 URL = "https://github.com/alex-crr/FusionScale"
 DESCRIPTION = "Zoom the viewport to true 1:1 physical size using a one-time screen calibration."
 
