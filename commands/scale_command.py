@@ -2,7 +2,11 @@ import adsk.core
 import adsk.fusion
 import traceback
 
+import os
+
 from ..lib import config, camera
+
+_HELP_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "help.html")
 
 _handlers = []
 _cg_group = None
@@ -30,6 +34,7 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         try:
             app = adsk.core.Application.get()
             cmd = args.command
+            cmd.helpFile = _HELP_FILE
             cfg = config.load()
 
             if config.is_calibrated():
@@ -61,6 +66,7 @@ class RecalibrateCreatedHandler(adsk.core.CommandCreatedEventHandler):
         try:
             app = adsk.core.Application.get()
             cmd = args.command
+            cmd.helpFile = _HELP_FILE
             cfg = config.load()
 
             design = adsk.fusion.Design.cast(app.activeProduct)

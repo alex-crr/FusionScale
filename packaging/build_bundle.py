@@ -34,6 +34,7 @@ CONTENTS = [
     "commands/__init__.py", "commands/scale_command.py",
     "lib/__init__.py", "lib/camera.py", "lib/config.py",
     "resources/16x16.png", "resources/32x32.png", "resources/64x64.png",
+    "help.html",
 ]
 
 PACKAGE_CONTENTS = f"""<?xml version="1.0" encoding="utf-8"?>
